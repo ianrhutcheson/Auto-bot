@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Doodle Jump Pro</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="hud">
+        <div id="score">Score: 0</div>
+        <div id="best">Best: 0</div>
+      </div>
+      <canvas id="game" width="480" height="800"></canvas>
+      <div id="overlay" class="visible">
+        <div class="panel">
+          <h1>Doodle Jump Pro</h1>
+          <p>Move: A/D or Arrow Keys</p>
+          <p>Jump: automatic on platforms</p>
+          <p>Start: Space or Enter</p>
+          <p>Fullscreen: F</p>
+          <button id="start-btn">Start</button>
+        </div>
+      </div>
+      <div id="gameover" class="hidden">
+        <div class="panel">
+          <h2>Game Over</h2>
+          <div id="final-score">Score: 0</div>
+          <button id="restart-btn">Play Again</button>
+        </div>
+      </div>
+    </div>
+    <script src="main.js"></script>
+  </body>
+</html>
