@@ -22,3 +22,21 @@ TODO:
 
 Updates:
 - Added sprite animation via squash/stretch, bobbing, and tilt based on velocity/input for a more lively character.
+
+Updates:
+- Generated a 2x2 player sprite sheet and wired frame-based animation plus landing/boost effects (dust puffs + streaks).
+
+Updates:
+- Created an Expo React Native app in `mobile/` and ported the game with sprite sheet animation, dust puffs, and boost streaks.
+
+Updates:
+- Added tilt controls via `expo-sensors` Accelerometer (fallback to touch).
+
+Updates:
+- Added new creative features to the mobile build: collectibles (energy orbs), jetpack power-up, breakable platforms, combo meter, and visual sparkles/boost trails.
+
+Updates:
+- Added expo-dev-client dependency and iOS bundle identifier to support local dev builds on device.
+
+Updates:
+- YOLO feature pack: enemy drones, shield power-up, wind gust zones, shield aura, and HUD badges. New assets: enemy_drone.png + shield.png.

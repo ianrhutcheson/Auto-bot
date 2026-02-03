@@ -26,6 +26,7 @@ const SETTINGS = {
 };
 
 const ASSET_PATHS = {
+  playerSheet: "assets/player_sheet.png",
   player: "assets/player.png",
   platform: "assets/platform.png",
   platformMoving: "assets/platform_moving.png",
@@ -60,8 +61,12 @@ const state = {
     w: 62,
     h: 68,
     squashTimer: 0,
+    blinkTimer: 0,
+    nextBlinkTime: 0,
   },
   platforms: [],
+  puffs: [],
+  streaks: [],
   manualStep: false,
 };
 
@@ -75,7 +80,11 @@ function initGame() {
   state.player.vx = 0;
   state.player.vy = -SETTINGS.jumpVelocity * 0.7;
   state.player.squashTimer = 0;
+  state.player.blinkTimer = 0;
+  state.player.nextBlinkTime = randRange(1.6, 3.2);
   state.platforms = [];
+  state.puffs = [];
+  state.streaks = [];
 
   let y = HEIGHT - 40;
   while (state.platforms.length < SETTINGS.maxPlatforms) {
@@ -107,6 +116,13 @@ function update(dt) {
 
   state.time += dt;
   const player = state.player;
+  if (player.blinkTimer > 0) {
+    player.blinkTimer = Math.max(0, player.blinkTimer - dt);
+  }
+  if (state.time >= player.nextBlinkTime) {
+    player.blinkTimer = 0.12;
+    player.nextBlinkTime = state.time + randRange(2.4, 4.6);
+  }
   const moveDirection = getMoveDirection();
   player.vx = moveDirection * SETTINGS.moveSpeed;
 
@@ -135,9 +151,11 @@ function update(dt) {
             : SETTINGS.jumpVelocity;
         if (platform.hasSpring) {
           platform.springUsed = true;
+          spawnBoostStreaks(player);
         }
         player.vy = -jumpPower;
         player.squashTimer = 0.12;
+        spawnPuff(platform);
         break;
       }
     }
@@ -165,6 +183,9 @@ function update(dt) {
   if (player.squashTimer > 0) {
     player.squashTimer = Math.max(0, player.squashTimer - dt);
   }
+
+  updatePuffs(dt);
+  updateStreaks(dt);
 }
 
 function ensurePlatforms() {
@@ -184,6 +205,8 @@ function render() {
     drawPlatform(platform);
   }
 
+  drawPuffs();
+  drawStreaks();
   drawPlayer(state.player);
 
   scoreEl.textContent = `Score: ${Math.floor(state.score)}`;
@@ -241,6 +264,97 @@ function drawPlatform(platform) {
   }
 }
 
+function spawnPuff(platform) {
+  const count = 4 + Math.floor(rng() * 3);
+  const baseX = platform.x + platform.w / 2;
+  const baseY = platform.y + 2;
+  for (let i = 0; i < count; i += 1) {
+    const angle = randRange(-Math.PI, 0);
+    const speed = randRange(30, 90);
+    state.puffs.push({
+      x: baseX + randRange(-18, 18),
+      y: baseY + randRange(-4, 6),
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed * 0.5 - randRange(10, 40),
+      r: randRange(4, 9),
+      life: randRange(0.35, 0.55),
+      maxLife: randRange(0.35, 0.55),
+    });
+  }
+}
+
+function updatePuffs(dt) {
+  state.puffs = state.puffs.filter((puff) => {
+    puff.life -= dt;
+    puff.x += puff.vx * dt;
+    puff.y += puff.vy * dt;
+    puff.vy += 120 * dt;
+    puff.vx *= 0.98;
+    return puff.life > 0;
+  });
+}
+
+function drawPuffs() {
+  for (const puff of state.puffs) {
+    const alpha = clamp(puff.life / puff.maxLife, 0, 1);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.28 * alpha})`;
+    ctx.beginPath();
+    ctx.arc(puff.x, puff.y, puff.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function spawnBoostStreaks(player) {
+  const count = 10;
+  for (let i = 0; i < count; i += 1) {
+    state.streaks.push({
+      x: player.x + randRange(-10, 10),
+      y: player.y + player.h * 0.35,
+      vx: randRange(-40, 40),
+      vy: randRange(220, 360),
+      life: randRange(0.22, 0.36),
+      maxLife: randRange(0.22, 0.36),
+      length: randRange(10, 22),
+    });
+  }
+}
+
+function updateStreaks(dt) {
+  state.streaks = state.streaks.filter((streak) => {
+    streak.life -= dt;
+    streak.x += streak.vx * dt;
+    streak.y += streak.vy * dt;
+    streak.vy += 40 * dt;
+    return streak.life > 0;
+  });
+}
+
+function drawStreaks() {
+  ctx.lineCap = "round";
+  for (const streak of state.streaks) {
+    const alpha = clamp(streak.life / streak.maxLife, 0, 1);
+    const speed = Math.hypot(streak.vx, streak.vy) || 1;
+    const dx = (streak.vx / speed) * streak.length;
+    const dy = (streak.vy / speed) * streak.length;
+    ctx.strokeStyle = `rgba(120, 216, 255, ${0.65 * alpha})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(streak.x, streak.y);
+    ctx.lineTo(streak.x - dx, streak.y - dy);
+    ctx.stroke();
+  }
+}
+
+function getPlayerFrame(player) {
+  if (player.blinkTimer > 0) {
+    return 1;
+  }
+  if (player.vy < -160) {
+    return 2 + (Math.floor(state.time * 12) % 2);
+  }
+  return 0;
+}
+
 function drawPlayer(player) {
   const bob = Math.sin(state.time * 6) * 2.5;
   const tilt = clamp(player.vx / SETTINGS.moveSpeed, -1, 1) * 0.22;
@@ -256,7 +370,27 @@ function drawPlayer(player) {
   ctx.rotate(tilt);
   ctx.scale(stretchX, stretchY);
 
-  if (assets.images.player) {
+  if (assets.images.playerSheet) {
+    const sheet = assets.images.playerSheet;
+    const cols = 2;
+    const rows = 2;
+    const frame = getPlayerFrame(player);
+    const frameW = sheet.width / cols;
+    const frameH = sheet.height / rows;
+    const sx = (frame % cols) * frameW;
+    const sy = Math.floor(frame / cols) * frameH;
+    ctx.drawImage(
+      sheet,
+      sx,
+      sy,
+      frameW,
+      frameH,
+      -player.w / 2,
+      -player.h / 2,
+      player.w,
+      player.h
+    );
+  } else if (assets.images.player) {
     ctx.drawImage(
       assets.images.player,
       -player.w / 2,
@@ -469,6 +603,10 @@ window.render_game_to_text = () => {
       type: platform.type,
       spring: platform.hasSpring && !platform.springUsed,
     })),
+    effects: {
+      puffs: state.puffs.length,
+      streaks: state.streaks.length,
+    },
     score: Math.floor(state.score),
   };
   return JSON.stringify(payload);
